@@ -4,14 +4,14 @@
 The purpose of this repository is to hold the code for sensor and actuation system for the ISR17 submarine.
 
 ## Schematic
-![arduino_wiring_diagram](https://github.com/VT-HPS/ISR17/blob/main/Wiring%20Diagram.png)
+![arduino_wiring_diagram](https://github.com/VT-HPS/ISR17/blob/main/Pictures/Wiring%20Diagram.png)
 
 ## Files included in this repository 
 
 [gui.py](https://github.com/Syennagraham/ISR17/blob/main/gui.py)
 
 Output should look like:
-![GUI](https://github.com/VT-HPS/ISR17/blob/main/Screen%20Shot%202022-02-13%20at%2012.47.55%20PM.png)
+![GUI](https://github.com/VT-HPS/ISR17/blob/main/Pictures/Screen%20Shot%202022-02-13%20at%2012.47.55%20PM.png)
 
 Python3
 
@@ -27,7 +27,7 @@ Controls two motors using 5 buttons.
 
 
 Arduino serial terminal should look like:
-![arduino_serial_terminal](https://github.com/VT-HPS/ISR17/blob/main/Screen%20Shot%202022-02-13%20at%2012.48.01%20PM.png)
+![arduino_serial_terminal](https://github.com/VT-HPS/ISR17/blob/main/Pictures/Screen%20Shot%202022-02-13%20at%2012.48.01%20PM.png)
 
 
 Arduino IDE
