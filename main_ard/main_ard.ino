@@ -41,6 +41,25 @@ MPU6050 mpu;
 #define LED_PIN 13 // (Arduino is 13)
 bool blinkState = false;
 
+// Delay between steps in microseconds and counter for micros
+const unsigned long microsBetweenSteps = 1000;
+unsigned long prevMicros = 0;
+
+// Variable to keep track of micros count for motors and lights
+unsigned long currMicros = 0;
+
+// Variables to keep track of motor state
+bool pitchMoving = false;
+bool yawMoving = false;
+bool pitchClockwise = false;
+bool yawClockwise = false;
+
+// Counter variables for motor steps
+int pitchStepCount = 0;
+int yawStepCount = 0;
+int maxClockwiseStepCount = 800;
+int maxCounterClockwiseStepCount = -800;
+
 // Light control vars
 unsigned long prevLightMicros = 0;
 const long lightOffTime = 750000;
@@ -71,39 +90,6 @@ volatile bool mpuInterrupt = false;     // indicates whether MPU interrupt pin h
 void dmpDataReady() {
   mpuInterrupt = true;
 }
-
-
-// Motor Variables
-// Direction variables
-boolean setPitchDir = LOW; // Set Pitch Direction
-boolean setYawDir = LOW; // Set Yaw Direction
-
-// Button variables
-boolean buttonLeftPushed = false;
-boolean buttonRightPushed = false;
-boolean buttonUpPushed = false;
-boolean buttonDownPushed = false;
-
-// Button pushed variables
-boolean pitchButtonPushed = false;
-boolean yawButtonPushed = false;
-
-// Motor current setting variable
-boolean pitchSetHigh = false;
-boolean yawSetHigh = false;
-
-/*
-   Pulse timing
-
-   Pulse Settings in microseconds (microsBetweenSteps)
-   1000 = slow
-   750 = moderate slow
-   500 = moderate fast
-   250 = fast
-*/
-unsigned long microsBetweenSteps = 1000; // microseconds
-unsigned long currMicros = 0;
-unsigned long prevStepMicros = 0;
 
 const int dataINA_RPM = 11; //RPM sensor 1
 const int dataINC_RPM = 12; //RPM sensor 2
@@ -193,7 +179,7 @@ void rpm_value()
 void gyro() {
   // if programming failed, don't try to do anything
   if (!dmpReady) {
-    Serial.println("!#!");
+    Serial.println("!,!");
     return;
   }
   // read a packet from FIFO
@@ -206,9 +192,9 @@ void gyro() {
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
     //Serial.print("pry\t");
     Serial.print(ypr[2] * 180 / M_PI); //pitch
-    //Serial.print("#");
+    //Serial.print(",");
     //Serial.print(ypr[1] * 180/M_PI); //roll
-    Serial.print("#");
+    Serial.print(",");
     Serial.println(ypr[0] * 180 / M_PI); //yaw
 
 #endif
@@ -218,93 +204,92 @@ void gyro() {
     //digitalWrite(LED_PIN, blinkState);
   }
   else {
-    Serial.println("!#!");
+    Serial.println("!,!");
   }
 }
 
 
-/*
-   Read buttons and set pushed to true if pins are HIGH
-*/
-void readButtons() {
-  buttonLeftPushed = false;
-  buttonRightPushed = false;
-  buttonUpPushed = false;
-  buttonDownPushed = false;
-  pitchButtonPushed = false;
-  yawButtonPushed = false;
+// Read the state of the buttons and update motor state accordingly
+void updateMotorState() {
+  bool buttonLeftPushed = digitalRead(yawLeft) == HIGH;
+  bool buttonRightPushed = digitalRead(yawRight) == HIGH;
+  bool buttonUpPushed = digitalRead(pitchUp) == HIGH;
+  bool buttonDownPushed = digitalRead(pitchDown) == HIGH;
 
-  if (digitalRead(yawLeft) == HIGH) {
-    buttonLeftPushed = true;
-    yawButtonPushed = true;
+  // Determine which motor(s) should be moving and in which direction
+  if (buttonLeftPushed && !buttonRightPushed) {
+    yawMoving = true;
+    yawClockwise = true;
   }
-  if (digitalRead(yawRight) == HIGH) {
-    buttonRightPushed = true;
-    yawButtonPushed = true;
+  else if (buttonRightPushed && !buttonLeftPushed) {
+    yawMoving = true;
+    yawClockwise = false;
   }
-  if (digitalRead(pitchUp) == HIGH) {
-    buttonUpPushed = true;
-    pitchButtonPushed = true;
-  }
-  if (digitalRead(pitchDown) == HIGH) {
-    buttonDownPushed = true;
-    pitchButtonPushed = true;
-  }
-}
-
-
-/*
-   Change directions of motor depending on which button is pushed
-
-   WARNING: If right and left or up and down are pressed at the same time
-            up and left will take precendent
-*/
-void setDirections() {
-  if (buttonLeftPushed) {
-    setYawDir = HIGH; //Clockwise
-  }
-  else if (buttonRightPushed) {
-    setYawDir = LOW; //Counter Clockwise
+  else {
+    yawMoving = false;
   }
 
-  if (buttonUpPushed) {
-    setPitchDir = HIGH; //Clockwise
+  if (buttonUpPushed && !buttonDownPushed) {
+    pitchMoving = true;
+    pitchClockwise = true;
   }
-  else if (buttonDownPushed) {
-    setPitchDir = LOW; //Counter Clockwise
+  else if (buttonDownPushed && !buttonUpPushed) {
+    pitchMoving = true;
+    pitchClockwise = false;
+  }
+  else {
+    pitchMoving = false;
   }
 }
 
+// Move the motors one step in the appropriate direction(s)
+void moveMotors() {
+  if (currMicros - prevMicros >= microsBetweenSteps) {
+    prevMicros = currMicros;
+    
+    if (pitchMoving) {
+      if (pitchClockwise && pitchStepCount < maxClockwiseStepCount) {
+        // Set the direction pin to for clockwise
+        digitalWrite(pitchDirPin, HIGH);
 
-/*
-   Run motors for one step depending on buttons pushed
-*/
-void runMotors() {
-  if ((currMicros - prevStepMicros) >= microsBetweenSteps) {
-    prevStepMicros = currMicros;
+        // Toggle the step pin to move one step
+        digitalWrite(pitchStepPin, HIGH);
+        digitalWrite(pitchStepPin, LOW);
+        pitchStepCount++;
+      }
+      else if (!pitchClockwise && pitchStepCount > maxCounterClockwiseStepCount) {
+        // Set the direction pin to for counter clockwise
+        digitalWrite(pitchDirPin, LOW);
 
-    if (pitchButtonPushed && !pitchSetHigh) {
-      digitalWrite(pitchDirPin, setPitchDir);
-      digitalWrite(pitchStepPin, HIGH);
-      pitchSetHigh = true;
-    }
-    else if (pitchSetHigh) {
-      digitalWrite(pitchStepPin, LOW);
-      pitchSetHigh = false;
+        // Toggle the step pin to move one step
+        digitalWrite(pitchStepPin, HIGH);
+        digitalWrite(pitchStepPin, LOW);
+        pitchStepCount--;
+      }
     }
 
-    if (yawButtonPushed && !yawSetHigh) {
-      digitalWrite(yawDirPin, setYawDir);
-      digitalWrite(yawStepPin, HIGH);
-      yawSetHigh = true;
-    }
-    else if (yawSetHigh) {
-      digitalWrite(yawStepPin, LOW);
-      yawSetHigh = false;
+    if (yawMoving) {
+      if (yawClockwise && yawStepCount < maxClockwiseStepCount) {
+        // Set the direction pin to for clockwise
+        digitalWrite(yawDirPin, HIGH);
+
+        // Toggle the step pin to move one step
+        digitalWrite(yawStepPin, HIGH);
+        digitalWrite(yawStepPin, LOW);
+        yawStepCount++;
+      }
+      else if (!yawClockwise && yawStepCount > maxCounterClockwiseStepCount) {
+        // Set the direction pin to for counter clockwise
+        digitalWrite(yawDirPin, LOW);
+
+        // Toggle the step pin to move one step
+        digitalWrite(yawStepPin, HIGH);
+        digitalWrite(yawStepPin, LOW);
+        yawStepCount--;
+      }
     }
   }
 }
-
 
 void battery_voltage() {
   voltage = random(0, 12);
@@ -342,10 +327,10 @@ void setup() {
   pinMode(yawDirPin, OUTPUT);
   pinMode(yawStepPin, OUTPUT);
 
-  pinMode(pitchUp, INPUT);
-  pinMode(pitchDown, INPUT);
-  pinMode(yawLeft, INPUT);
-  pinMode(yawRight, INPUT);
+  pinMode(yawLeft, INPUT_PULLUP);
+  pinMode(yawRight, INPUT_PULLUP);
+  pinMode(pitchUp, INPUT_PULLUP);
+  pinMode(pitchDown, INPUT_PULLUP);
 
   // initialize the pushbutton pin as an input:
   pinMode(buttonPin, INPUT);
@@ -399,20 +384,22 @@ void setup() {
 
 
 void loop() {
-  // Motor Code
+  // Get micros for motors and lights
   currMicros = micros();
-  readButtons();
-  setDirections();
-  runMotors();
+
+  // Motor Code
+  // Update motor state based on button presses and move motors one step
+  updateMotorState();
+  moveMotors();
 
   // Lights
   runLights();
 
   // Sensor Code
   pressure();
-  Serial.print("#");
+  Serial.print(",");
   rpm_value();
-  Serial.print("#");
+  Serial.print(",");
   gyro();
 
   
@@ -437,13 +424,13 @@ void loop() {
   doLoop = true;
   if (doLoop == true) {
     pressure();
-    Serial.print("#");
+    Serial.print(",");
     rpm_value();
-    Serial.print("#");
+    Serial.print(",");
     gyro();
-    //Serial.print("#");
+    //Serial.print(",");
     //battery_voltage();
-    //Serial.print("#");
+    //Serial.print(",");
     //timeSinceStart();
 
     //put this function back in if sensors stall again
