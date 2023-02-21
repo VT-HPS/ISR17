@@ -57,8 +57,14 @@ bool yawClockwise = false;
 // Counter variables for motor steps
 int pitchStepCount = 0;
 int yawStepCount = 0;
-int maxClockwiseStepCount = 800;
-int maxCounterClockwiseStepCount = -800;
+
+// Variables for max clockwise and counterwise step counts
+const int gearRatio = 10; // Represents a 10:1 gear ratio, used for outputting degree of control surfaces
+const int degree = 200;
+double degreeRatio = degree/360;
+const int stepCountPerRotation = 1600;
+int maxClockwiseStepCount = degreeRatio * stepCountPerRotation;
+int maxCounterClockwiseStepCount = degreeRatio * -stepCountPerRotation;
 
 // Light control vars
 unsigned long prevLightMicros = 0;
@@ -179,7 +185,7 @@ void rpm_value()
 void gyro() {
   // if programming failed, don't try to do anything
   if (!dmpReady) {
-    Serial.println("!,!");
+    Serial.print("!,!");
     return;
   }
   // read a packet from FIFO
@@ -195,7 +201,7 @@ void gyro() {
     //Serial.print(",");
     //Serial.print(ypr[1] * 180/M_PI); //roll
     Serial.print(",");
-    Serial.println(ypr[0] * 180 / M_PI); //yaw
+    Serial.print(ypr[0] * 180 / M_PI); //yaw
 
 #endif
 
@@ -204,7 +210,7 @@ void gyro() {
     //digitalWrite(LED_PIN, blinkState);
   }
   else {
-    Serial.println("!,!");
+    Serial.print("!,!");
   }
 }
 
@@ -291,9 +297,14 @@ void moveMotors() {
   }
 }
 
-void battery_voltage() {
-  voltage = random(0, 12);
-  Serial.print(voltage);
+
+void printDirectionDegrees() {
+  double pitchDegree = (pitchStepCount / stepCountPerRotation) / gearRatio;
+  double yawDegree = (yawStepCount / stepCountPerRotation) / gearRatio;
+
+  Serial.print(pitchDegree);
+  Serial.print(",");
+  Serial.println(yawDegree);
 }
 
 
@@ -402,44 +413,7 @@ void loop() {
   Serial.print(",");
   gyro();
 
-  
-  /*if (digitalRead(buttonPin) &&  state == false) {
-    state = true;
-    startTime = millis();
-    //Serial.println("button pressed");
-  }
-
-  else if (state == true && !digitalRead(buttonPin)) {
-    state = false;
-    endTime = millis();
-    totalTime = endTime - startTime;
-    if (totalTime >= 1000) {
-      if (doLoop) {
-        doLoop = false;
-      } else {
-        doLoop = true;
-      }
-    }
-  }
-  doLoop = true;
-  if (doLoop == true) {
-    pressure();
-    Serial.print(",");
-    rpm_value();
-    Serial.print(",");
-    gyro();
-    //Serial.print(",");
-    //battery_voltage();
-    //Serial.print(",");
-    //timeSinceStart();
-
-    //put this function back in if sensors stall again
-    //    count = count + 1;
-    //    if (count == 500) {
-    //      void (*reboot)(void) = 0; // Creating a function pointer to address 0 then calling it reboots the board.
-    //      reboot();
-    //
-    //      }
-  }
-  */
+  // Print control surface degree values
+  Serial.print(",");
+  printDirectionDegrees();
 }
