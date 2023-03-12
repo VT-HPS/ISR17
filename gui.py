@@ -10,7 +10,8 @@ from numpy import interp
 import threading
 import random
 
-USB = '/dev/ttyACM0'
+#USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
+USB = '/dev/cu.usbmodem1101' #testing computer - check which usb port the arduino is hooked to
 gyro_list = [0,0]
 depth = 0
 psv = 0
@@ -19,6 +20,12 @@ rpm_value = 0
 rpm_graphic_coord = 0
 depth_graphic_coord = 0
 
+
+######### CREATE DATALOGGING FILE ###################################################################################
+
+home_dir = os.path.expanduser('~') # Get the path to the user's home directory
+file_path = os.path.join(home_dir, 'Desktop/github/ISR17/serial_list_test_data.txt') # Create a file path in the home directory
+print(file_path)
 
 ######### CONNECT WITH ARDUINO ######################################################################################
 
@@ -63,7 +70,6 @@ heading_canvas.create_line((WIDTH/2), (HEIGHT/2)+20, (HEIGHT/2), (HEIGHT/2)-20)
 heading_canvas.create_oval((WIDTH/2)-RADIUS, (HEIGHT/2)-RADIUS, (WIDTH/2)+RADIUS,
         (HEIGHT/2)+RADIUS, fill='green', tags=TAG)
 heading_canvas.grid(column=0, row=1)
-
 
 # DEPTH DISPLAY SETUP
 # labels
@@ -209,6 +215,12 @@ def update_gui():
         depth_dashboard()
         time.sleep(0.1)
 
+
+
+def close_win():
+   root.destroy()
+
+
 # FOR TESTING
 def get_random_xy_coord():
     global gyro_coord
@@ -216,18 +228,28 @@ def get_random_xy_coord():
     global decode_rpms
     global depth_indicator
     global decode_ps_voltage
-    while True:
-        time.sleep(0.5)
-        data = [random.randrange(-9,9,1), random.randrange(-9,9,1)]
-        y = interp(int(data[0]/10),[-9,9],[150,50])
-        x = interp(int(data[1]/10),[-9,9],[50,150])
-        gyro_coord = [int(x), int(y)]
 
-        decode_rpms = random.randrange(0, 250)
-        rpmA = interp(decode_rpms,[0,250],[3,550])
+    # CREATE A FILE FOR OUTPUTING SERIAL DATA FOR DATALOGGING
+    with open(file_path, 'w') as output_file:
+        while True:
+            time.sleep(0.5)
+            data = [random.randrange(-9,9,1), random.randrange(-9,9,1)]
+            y = interp(int(data[0]/10),[-9,9],[150,50])
+            x = interp(int(data[1]/10),[-9,9],[50,150])
+            gyro_coord = [int(x), int(y)]
 
-        decode_ps_voltage = random.randrange(0,1023)
-        depth_indicator = convert_volts_to_coord(decode_ps_voltage) 
+            decode_rpms = random.randrange(0, 250)
+            rpmA = interp(decode_rpms,[0,250],[3,550])
+
+            decode_ps_voltage = random.randrange(0,1023)
+            depth_indicator = convert_volts_to_coord(decode_ps_voltage) 
+            serial_list = [depth_indicator, rpmA, int(x), int(y)]
+            print('SERIAL LIST ', str(serial_list))
+            # OUTPUT SERIAL DATA FOR DL
+            output_file.write(str(serial_list) + "\n")
+            output_file.flush()    
+# END OF FOR TESTING
+
 
 
 def read_sensor_data():
@@ -239,58 +261,62 @@ def read_sensor_data():
     serial_list = []
     serial_list_backup = [0,0,0,0]
 
-    while True:
-        data = read_arduino()
-        print('data: ', data)        
-        serial_string = (data.decode('utf8'))
-        
-        if (data == b'') or (re.match( r'^\.' or r'^\>', serial_string)):  
-            print('data2 ', data)
-            continue
-        else:    
-            if "!" not in serial_string.split("#"):
-                for x in serial_string.split('#'):
-                    if x != '':
-                        serial_list.append(float(x)) 
-                    else:
-                        serial_list.append(0)
-                print("Original Serial List: ", serial_list)
-                if len(serial_list) != 4 and len(serial_list) != 5:
-                    serial_list = [0,0,0,0]
-                print('serial data list: ', serial_list)
-                serial_list_backup = serial_list.copy()
-            else:
-                serial_list = serial_list_backup.copy()
+    # CREATE A FILE FOR OUTPUTING SERIAL DATA FOR DATALOGGING
+    with open(file_path, 'w') as output_file:
+        while True:
+            data = read_arduino()
+            print('data: ', data)        
+            serial_string = (data.decode('utf8'))
             
-            filtered_gyro_values = filter_gyro_coord(serial_list) # make sure gyro data is between -90 and 90
-            print('serial list with filtered gyro values: ', filtered_gyro_values) 
-            print('')
+            if (data == b'') or (re.match( r'^\.' or r'^\>', serial_string)):  
+                print('data2 ', data)
+                continue
+            else:    
+                if "!" not in serial_string.split("#"):
+                    for x in serial_string.split('#'):
+                        if x != '':
+                            serial_list.append(float(x)) 
+                        else:
+                            serial_list.append(0)
+                    print("Original Serial List: ", serial_list)
+                    if len(serial_list) != 4 and len(serial_list) != 5:
+                        serial_list = [0,0,0,0]
+                    print('serial data list: ', serial_list)
+                    serial_list_backup = serial_list.copy()
+                else:
+                    serial_list = serial_list_backup.copy()
+                
+                filtered_gyro_values = filter_gyro_coord(serial_list) # make sure gyro data is between -90 and 90
+                print('serial list with filtered gyro values: ', filtered_gyro_values) 
+                print('')
 
-            gyro_list = convert_gyro_to_coord(filtered_gyro_values)
-            print('gyro_list: ', gyro_list, '- mapped from [-9,9],[50,150] and [-9,9],[150,50]') 
+                gyro_list = convert_gyro_to_coord(filtered_gyro_values)
+                print('gyro_list: ', gyro_list, '- mapped from [-9,9],[50,150] and [-9,9],[150,50]') 
 
-            ps_value = serial_list[0]
-            depth_graphic_coord = convert_volts_to_coord(ps_value)
-            print('ps_coord: ', depth_graphic_coord, ' - mapped from [0,1023] to [400,100]') 
+                ps_value = serial_list[0]
+                depth_graphic_coord = convert_volts_to_coord(ps_value)
+                print('ps_coord: ', depth_graphic_coord, ' - mapped from [0,1023] to [400,100]') 
 
-            rpm_value = serial_list[1]
-            rpm_graphic_coord = convert_rpms_to_coord(rpm_value)
-            print('rpm_graphic_coord: ', rpm_graphic_coord, '- mapped from [0,250] to [3,550]') 
-            print('')
-            print('')
-            serial_list = []
+                rpm_value = serial_list[1]
+                rpm_graphic_coord = convert_rpms_to_coord(rpm_value)
+                print('rpm_graphic_coord: ', rpm_graphic_coord, '- mapped from [0,250] to [3,550]') 
+                print('SERIAL LIST = ', serial_list)
+
+                # OUTPUT SERIAL DATA FOR DL
+                output_file.write(str(serial_list) + "\n")
+                output_file.flush()  
        
 
 if '__main__' == __name__:
     # heading elements
 
-    # random data testing 
-    #th = threading.Thread(target=get_random_xy_coord, args=(),  daemon=True)
-    th = threading.Thread(target=read_sensor_data, args=(),  daemon=True)
+    # random data testing
+    th = threading.Thread(target=get_random_xy_coord, args=(),  daemon=True)
+
+    #th = threading.Thread(target=read_sensor_data, args=(),  daemon=True)
     th.start()
 
     update_gui()
-
 
     root.mainloop()  # run hud
     test.mainloop()
