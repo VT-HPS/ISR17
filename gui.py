@@ -24,7 +24,7 @@ depth_graphic_coord = 0
 ######### CREATE DATALOGGING FILE ###################################################################################
 
 home_dir = os.path.expanduser('~') # Get the path to the user's home directory
-file_path = os.path.join(home_dir, 'Desktop/github/ISR17/serial_list_test_data.txt') # Create a file path in the home directory
+file_path = os.path.join(home_dir, 'Desktop/github/ISR17/serial_list_data.txt') # Create a file path in the home directory
 print(file_path)
 
 ######### CONNECT WITH ARDUINO ######################################################################################
