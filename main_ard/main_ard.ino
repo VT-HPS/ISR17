@@ -21,10 +21,10 @@
 
 #define pitchDirPin 2
 #define pitchStepPin 3
-#define pitchUp 6
-#define pitchDown 7
 #define yawDirPin 4
 #define yawStepPin 5
+#define pitchUp 6
+#define pitchDown 7
 #define yawLeft 8
 #define yawRight 9
 
@@ -37,8 +37,8 @@
 MPU6050 mpu;
 
 #define OUTPUT_READABLE_YAWPITCHROLL
-#define INTERRUPT_PIN 2  // use pin 2 on Arduino Uno & most boards
-#define LED_PIN 13 // (Arduino is 13)
+#define INTERRUPT_PIN 13  // use pin 13 on Arduino Uno & most boards
+#define LED_PIN 10 // (Arduino is 10)
 bool blinkState = false;
 
 // Delay between steps in microseconds and counter for micros
@@ -59,12 +59,13 @@ int pitchStepCount = 0;
 int yawStepCount = 0;
 
 // Variables for max clockwise and counterwise step counts
-const int gearRatio = 10; // Represents a 10:1 gear ratio, used for outputting degree of control surfaces
-const int degree = 200;
+#define degreesInRotation 360
+const double gearRatio = 10; // Represents a 10:1 gear ratio, used for outputting degree of control surfaces
+const double degree = 200;
 double degreeRatio = degree/360;
-const int stepCountPerRotation = 1600;
-int maxClockwiseStepCount = degreeRatio * stepCountPerRotation;
-int maxCounterClockwiseStepCount = degreeRatio * -stepCountPerRotation;
+const double stepCountPerRotation = 1600;
+double maxClockwiseStepCount = degreeRatio * stepCountPerRotation;
+double maxCounterClockwiseStepCount = degreeRatio * -stepCountPerRotation;
 
 // Light control vars
 unsigned long prevLightMicros = 0;
@@ -252,12 +253,10 @@ void updateMotorState() {
 void moveMotors() {
   if (currMicros - prevMicros >= microsBetweenSteps) {
     prevMicros = currMicros;
-    
     if (pitchMoving) {
       if (pitchClockwise && pitchStepCount < maxClockwiseStepCount) {
         // Set the direction pin to for clockwise
         digitalWrite(pitchDirPin, HIGH);
-
         // Toggle the step pin to move one step
         digitalWrite(pitchStepPin, HIGH);
         digitalWrite(pitchStepPin, LOW);
@@ -266,7 +265,6 @@ void moveMotors() {
       else if (!pitchClockwise && pitchStepCount > maxCounterClockwiseStepCount) {
         // Set the direction pin to for counter clockwise
         digitalWrite(pitchDirPin, LOW);
-
         // Toggle the step pin to move one step
         digitalWrite(pitchStepPin, HIGH);
         digitalWrite(pitchStepPin, LOW);
@@ -278,7 +276,6 @@ void moveMotors() {
       if (yawClockwise && yawStepCount < maxClockwiseStepCount) {
         // Set the direction pin to for clockwise
         digitalWrite(yawDirPin, HIGH);
-
         // Toggle the step pin to move one step
         digitalWrite(yawStepPin, HIGH);
         digitalWrite(yawStepPin, LOW);
@@ -287,7 +284,6 @@ void moveMotors() {
       else if (!yawClockwise && yawStepCount > maxCounterClockwiseStepCount) {
         // Set the direction pin to for counter clockwise
         digitalWrite(yawDirPin, LOW);
-
         // Toggle the step pin to move one step
         digitalWrite(yawStepPin, HIGH);
         digitalWrite(yawStepPin, LOW);
@@ -297,10 +293,9 @@ void moveMotors() {
   }
 }
 
-
 void printDirectionDegrees() {
-  double pitchDegree = (pitchStepCount / stepCountPerRotation) / gearRatio;
-  double yawDegree = (yawStepCount / stepCountPerRotation) / gearRatio;
+  double pitchDegree = (pitchStepCount / stepCountPerRotation) * degreesInRotation;
+  double yawDegree = (yawStepCount / stepCountPerRotation) * degreesInRotation;
 
   Serial.print(pitchDegree);
   Serial.print(",");
@@ -338,10 +333,10 @@ void setup() {
   pinMode(yawDirPin, OUTPUT);
   pinMode(yawStepPin, OUTPUT);
 
-  pinMode(yawLeft, INPUT_PULLUP);
-  pinMode(yawRight, INPUT_PULLUP);
-  pinMode(pitchUp, INPUT_PULLUP);
-  pinMode(pitchDown, INPUT_PULLUP);
+  pinMode(yawLeft, INPUT);
+  pinMode(yawRight, INPUT);
+  pinMode(pitchUp, INPUT);
+  pinMode(pitchDown, INPUT);
 
   // initialize the pushbutton pin as an input:
   pinMode(buttonPin, INPUT);
