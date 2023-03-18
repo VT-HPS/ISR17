@@ -272,15 +272,15 @@ def read_sensor_data():
                 print('data2 ', data)
                 continue
             else:    
-                if "!" not in serial_string.split("#"):
-                    for x in serial_string.split('#'):
+                if "!" not in serial_string.split(","):
+                    for x in serial_string.split(","):
                         if x != '':
                             serial_list.append(float(x)) 
                         else:
                             serial_list.append(0)
                     print("Original Serial List: ", serial_list)
-                    if len(serial_list) != 4 and len(serial_list) != 5:
-                        serial_list = [0,0,0,0]
+                    if len(serial_list) != 6 and len(serial_list) != 5:
+                        serial_list = [0,0,0,0,0,0]
                     print('serial data list: ', serial_list)
                     serial_list_backup = serial_list.copy()
                 else:
@@ -301,6 +301,9 @@ def read_sensor_data():
                 rpm_graphic_coord = convert_rpms_to_coord(rpm_value)
                 print('rpm_graphic_coord: ', rpm_graphic_coord, '- mapped from [0,250] to [3,550]') 
                 print('SERIAL LIST = ', serial_list)
+
+                control_surface_degrees = serial_list[4:]
+                print("Pitch degrees: ", control_surface_degrees[0], ", Yaw degrees: ", control_surface_degrees[1])
 
                 # OUTPUT SERIAL DATA FOR DL
                 output_file.write(str(serial_list) + "\n")
