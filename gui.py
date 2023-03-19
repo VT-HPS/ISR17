@@ -10,8 +10,8 @@ from numpy import interp
 import threading
 import random
 
-#USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
-USB = '/dev/cu.usbmodem1101' #testing computer - check which usb port the arduino is hooked to
+USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
+#USB = '/dev/cu.usbmodem1101' #testing computer - check which usb port the arduino is hooked to
 gyro_list = [0,0]
 depth = 0
 psv = 0
