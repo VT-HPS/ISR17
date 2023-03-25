@@ -10,8 +10,8 @@ from numpy import interp
 import threading
 import random
 
-#USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
-USB = '/dev/cu.usbmodem1101' #testing computer - check which usb port the arduino is hooked to
+USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
+#USB = '/dev/cu.usbmodem1101' #testing computer - check which usb port the arduino is hooked to
 gyro_list = [0,0]
 depth = 0
 psv = 0
@@ -24,7 +24,7 @@ depth_graphic_coord = 0
 ######### CREATE DATALOGGING FILE ###################################################################################
 
 home_dir = os.path.expanduser('~') # Get the path to the user's home directory
-file_path = os.path.join(home_dir, 'Desktop/github/ISR17/serial_list_data.txt') # Create a file path in the home directory
+file_path = os.path.join(home_dir, 'ISR17/ISR17/serial_list_data.txt') # Create a file path in the home directory
 print(file_path)
 
 ######### CONNECT WITH ARDUINO ######################################################################################
@@ -259,7 +259,7 @@ def read_sensor_data():
     global rpm_graphic_coord
     global gyro_list
     serial_list = []
-    serial_list_backup = [0,0,0,0]
+    serial_list_backup = [0,0,0,0,0,0]
 
     # CREATE A FILE FOR OUTPUTING SERIAL DATA FOR DATALOGGING
     with open(file_path, 'w') as output_file:
@@ -267,14 +267,16 @@ def read_sensor_data():
             data = read_arduino()
             print('data: ', data)        
             serial_string = (data.decode('utf8'))
-            
-            if (data == b'') or (re.match( r'^\.' or r'^\>', serial_string)):  
+            serial_string = serial_string.replace('\r', '')
+            serial_string = re.sub('[^\d,.-]|[.-](?=[^.]*[.])', '', serial_string) 
+
+            if (data == b'') or (re.match( r'^\.' or r'^\>' or '^\!', serial_string)) :
                 print('data2 ', data)
                 continue
             else:    
                 if "!" not in serial_string.split(","):
                     for x in serial_string.split(","):
-                        if x != '':
+                        if x != '': 
                             serial_list.append(float(x)) 
                         else:
                             serial_list.append(0)
@@ -303,7 +305,7 @@ def read_sensor_data():
                 print('SERIAL LIST = ', serial_list)
 
                 control_surface_degrees = serial_list[4:]
-                print("Pitch degrees: ", control_surface_degrees[0], ", Yaw degrees: ", control_surface_degrees[1])
+                #print("Pitch degrees: ", control_surface_degrees[0], ", Yaw degrees: ", control_surface_degrees[1])
 
                 # OUTPUT SERIAL DATA FOR DL
                 output_file.write(str(serial_list) + "\n")
@@ -314,9 +316,9 @@ if '__main__' == __name__:
     # heading elements
 
     # random data testing
-    th = threading.Thread(target=get_random_xy_coord, args=(),  daemon=True)
+    #th = threading.Thread(target=get_random_xy_coord, args=(),  daemon=True)
 
-    #th = threading.Thread(target=read_sensor_data, args=(),  daemon=True)
+    th = threading.Thread(target=read_sensor_data, args=(),  daemon=True)
     th.start()
 
     update_gui()
