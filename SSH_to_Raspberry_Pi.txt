@@ -1,0 +1,22 @@
+Connect computer to same wifi as raspberry pi
+ - Might need to use monitor and keyboard to access raspberry pi initially
+ - Default is Luke's, Syenna's, or James's hotspot on phone
+
+After connection to same wifi, open terminal
+ - Type command "ssh hps@raspberrypi"
+ - Password: hps
+
+Once connected to raspberry pi type these commands to start code
+ - cd ISR17/ISR17/
+ - compile main_ard/main_ard.ino
+ - upload main_ard/main_ard.ino
+ - python3 gui.py
+
+The code should now be uploaded and the gui should be functional
+
+hps@raspberrypi
+password: hps
+
+ip address: 172.20.10.3
+
+
