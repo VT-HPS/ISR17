@@ -10,8 +10,8 @@ from numpy import interp
 import threading
 import random
 
-USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
-#USB = '/dev/cu.usbmodem1101' #testing computer - check which usb port the arduino is hooked to
+#USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
+USB = '/dev/cu.usbmodem11201' #testing computer - check which usb port the arduino is hooked to
 gyro_list = [0,0]
 depth = 0
 psv = 0
@@ -32,7 +32,8 @@ print(file_path)
 arduino = serial.Serial(USB, 115200, timeout=0)
 
 def read_arduino():
-    return arduino.readline()[:-2] #the last bit gets rid of the new-line chars
+    #return arduino.readline()[:-2] #the last bit gets rid of the new-line chars
+    return arduino.readline()
 
 ######### DASHBOARD DISPLAY ITEMS ######################################################################################
 
@@ -264,11 +265,18 @@ def read_sensor_data():
     # CREATE A FILE FOR OUTPUTING SERIAL DATA FOR DATALOGGING
     with open(file_path, 'w') as output_file:
         while True:
+            serial_list = []
             data = read_arduino()
+            print('--------------------------------------------')
             print('data: ', data)        
-            serial_string = (data.decode('utf8'))
-            serial_string = serial_string.replace('\r', '')
-            serial_string = re.sub('[^\d,.-]|[.-](?=[^.]*[.])', '', serial_string) 
+            serial_string = (data.decode('ascii'))
+            #serial_string = serial_string.replace('\r', '')
+            serial_string = serial_string.strip()
+            print('serial string strip!!')
+            print(serial_string)
+            #serial_string = re.sub('[^\d,.-]|[.-](?=[^.]*[.])', '', serial_string) 
+            serial_string_split = serial_string.split(",")
+            print('serial string split = ', serial_string_split)
 
             if (data == b'') or (re.match( r'^\.' or r'^\>' or '^\!', serial_string)) :
                 print('data2 ', data)
@@ -277,7 +285,10 @@ def read_sensor_data():
                 if "!" not in serial_string.split(","):
                     for x in serial_string.split(","):
                         if x != '': 
-                            serial_list.append(float(x)) 
+                            try:
+                                serial_list.append(float(x)) 
+                            except:
+                                serial_list.append(0)
                         else:
                             serial_list.append(0)
                     print("Original Serial List: ", serial_list)
@@ -287,6 +298,7 @@ def read_sensor_data():
                     serial_list_backup = serial_list.copy()
                 else:
                     serial_list = serial_list_backup.copy()
+                    print('HIT BACK UP SERIAL LIST')
                 
                 filtered_gyro_values = filter_gyro_coord(serial_list) # make sure gyro data is between -90 and 90
                 print('serial list with filtered gyro values: ', filtered_gyro_values) 
