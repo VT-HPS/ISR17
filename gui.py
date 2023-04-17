@@ -10,8 +10,8 @@ from numpy import interp
 import threading
 import random
 
-#USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
-USB = '/dev/cu.usbmodem11201' #testing computer - check which usb port the arduino is hooked to
+USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
+#USB = '/dev/cu.usbmodem11201' #testing computer - check which usb port the arduino is hooked to
 gyro_list = [0,0]
 depth = 0
 psv = 0
@@ -269,7 +269,10 @@ def read_sensor_data():
             data = read_arduino()
             print('--------------------------------------------')
             print('data: ', data)        
-            serial_string = (data.decode('ascii'))
+            try: 
+                serial_string = (data.decode('ascii'))
+            except:
+                serial_string = '' 
             #serial_string = serial_string.replace('\r', '')
             serial_string = serial_string.strip()
             print('serial string strip!!')
@@ -280,7 +283,7 @@ def read_sensor_data():
 
             if (data == b'') or (re.match( r'^\.' or r'^\>' or '^\!', serial_string)) :
                 print('data2 ', data)
-                continue
+                serial_list = serial_list_backup.copy()
             else:    
                 if "!" not in serial_string.split(","):
                     for x in serial_string.split(","):
@@ -296,32 +299,34 @@ def read_sensor_data():
                         serial_list = [0,0,0,0,0,0]
                     print('serial data list: ', serial_list)
                     serial_list_backup = serial_list.copy()
+                    print('SERIAL LIST BU', serial_list_backup)
                 else:
                     serial_list = serial_list_backup.copy()
                     print('HIT BACK UP SERIAL LIST')
+                     
                 
-                filtered_gyro_values = filter_gyro_coord(serial_list) # make sure gyro data is between -90 and 90
-                print('serial list with filtered gyro values: ', filtered_gyro_values) 
-                print('')
+            filtered_gyro_values = filter_gyro_coord(serial_list) # make sure gyro data is between -90 and 90
+            print('serial list with filtered gyro values: ', filtered_gyro_values) 
+            print('')
 
-                gyro_list = convert_gyro_to_coord(filtered_gyro_values)
-                print('gyro_list: ', gyro_list, '- mapped from [-9,9],[50,150] and [-9,9],[150,50]') 
+            gyro_list = convert_gyro_to_coord(filtered_gyro_values)
+            print('gyro_list: ', gyro_list, '- mapped from [-9,9],[50,150] and [-9,9],[150,50]') 
 
-                ps_value = serial_list[0]
-                depth_graphic_coord = convert_volts_to_coord(ps_value)
-                print('ps_coord: ', depth_graphic_coord, ' - mapped from [0,1023] to [400,100]') 
+            ps_value = serial_list[0]
+            depth_graphic_coord = convert_volts_to_coord(ps_value)
+            print('ps_coord: ', depth_graphic_coord, ' - mapped from [0,1023] to [400,100]') 
 
-                rpm_value = serial_list[1]
-                rpm_graphic_coord = convert_rpms_to_coord(rpm_value)
-                print('rpm_graphic_coord: ', rpm_graphic_coord, '- mapped from [0,250] to [3,550]') 
-                print('SERIAL LIST = ', serial_list)
+            rpm_value = serial_list[1]
+            rpm_graphic_coord = convert_rpms_to_coord(rpm_value)
+            print('rpm_graphic_coord: ', rpm_graphic_coord, '- mapped from [0,250] to [3,550]') 
+            print('SERIAL LIST = ', serial_list)
 
-                control_surface_degrees = serial_list[4:]
-                #print("Pitch degrees: ", control_surface_degrees[0], ", Yaw degrees: ", control_surface_degrees[1])
+            control_surface_degrees = serial_list[4:]
+            #print("Pitch degrees: ", control_surface_degrees[0], ", Yaw degrees: ", control_surface_degrees[1])
 
-                # OUTPUT SERIAL DATA FOR DL
-                output_file.write(str(serial_list) + "\n")
-                output_file.flush()  
+            # OUTPUT SERIAL DATA FOR DL
+            output_file.write(str(serial_list) + "\n")
+            output_file.flush()  
        
 
 if '__main__' == __name__:
