@@ -275,15 +275,15 @@ def read_sensor_data():
                 serial_string = '' 
             #serial_string = serial_string.replace('\r', '')
             serial_string = serial_string.strip()
-            print('serial string strip!!')
-            print(serial_string)
+            print('serial string strip: ', serial_string)
             #serial_string = re.sub('[^\d,.-]|[.-](?=[^.]*[.])', '', serial_string) 
             serial_string_split = serial_string.split(",")
-            print('serial string split = ', serial_string_split)
+            print('serial string split: ', serial_string_split)
 
-            if (data == b'') or (re.match( r'^\.' or r'^\>' or '^\!', serial_string)) :
-                print('data2 ', data)
+            if (data == b'') or (re.match( r'^\.' or r'^\>' or '^\!', serial_string)) or len(serial_string_split) != 6:
+                print('data w/o backup: ', data)
                 serial_list = serial_list_backup.copy()
+                print('data w/ backup: ', serial_list)
             else:    
                 if "!" not in serial_string.split(","):
                     for x in serial_string.split(","):
@@ -341,4 +341,4 @@ if '__main__' == __name__:
     update_gui()
 
     root.mainloop()  # run hud
-    test.mainloop()
+#    test.mainloop()
