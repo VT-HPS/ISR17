@@ -78,7 +78,7 @@ heading_canvas.grid(column=0, row=1)
 # labels
 depth_label = ttk.Label(root, text='DEPTH', style='title.TLabel').grid(column=1, row=0, sticky='n')
 depth_value_label = ttk.Label(root, text="0", style='.TLabel')
-depth_value_label.place(x=730, y=25, anchor='n')
+depth_value_label.place(x=650, y=45, anchor='n')
 # canvas items
 depth_canvas = Canvas(root, height=400, width=100)
 depth_canvas.create_rectangle(3, 400, 100, 3, width='3')
