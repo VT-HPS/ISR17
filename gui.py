@@ -10,8 +10,9 @@ from numpy import interp
 import threading
 import random
 
-USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
-#USB = '/dev/cu.usbmodem11201' #testing computer - check which usb port the arduino is hooked to
+#USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
+USB = '/dev/cu.usbmodem11301' #testing computer - check which usb port the arduino is hooked to
+print("hit initial")
 gyro_list = [0,0]
 depth = 0
 psv = 0
@@ -19,6 +20,7 @@ ps_value = 0
 rpm_value = 0 
 rpm_graphic_coord = 0
 depth_graphic_coord = 0
+deptg_indicator = 0
 
 
 ######### CREATE DATALOGGING FILE ###################################################################################
@@ -32,8 +34,8 @@ print(file_path)
 arduino = serial.Serial(USB, 115200, timeout=0)
 
 def read_arduino():
-    #return arduino.readline()[:-2] #the last bit gets rid of the new-line chars
-    return arduino.readline()
+    return arduino.readline()[:-2] #the last bit gets rid of the new-line chars
+
 
 ######### DASHBOARD DISPLAY ITEMS ######################################################################################
 
@@ -75,6 +77,8 @@ heading_canvas.grid(column=0, row=1)
 # DEPTH DISPLAY SETUP
 # labels
 depth_label = ttk.Label(root, text='DEPTH', style='title.TLabel').grid(column=1, row=0, sticky='n')
+depth_value_label = ttk.Label(root, text="0", style='.TLabel')
+depth_value_label.place(x=650, y=45, anchor='n')
 # canvas items
 depth_canvas = Canvas(root, height=400, width=100)
 depth_canvas.create_rectangle(3, 400, 100, 3, width='3')
@@ -86,6 +90,8 @@ depth_bar = depth_canvas.create_rectangle(3, 400, 100, depth, fill='#FFCC00')
 # RPM DISPlAY SETUP
 #labels
 RPM_label = ttk.Label(root, text='RPM', style='title.TLabel').grid(column=0, row=2, sticky="nw")
+RPM_value_label = ttk.Label(root, text="0", style='.TLabel')
+RPM_value_label.place(x=20, y=410, anchor='w')
 # canvas items
 RPM_canvas = Canvas(root, height=100, width=550)
 RPM_canvas.create_rectangle(550, 3, 3, 100, width='3')
@@ -122,29 +128,25 @@ def delete_circle(canvasName, tag):
 
 # convert pressure sensor voltage to coordinates for canvas display
 def convert_volts_to_coord(psv_data):
-    if psv_data >= 1023:
-        return 100
-    elif psv_data <= 0:
+    #print('psv_data = ', psv_data)
+    depth_feet = round(psv_data/12)
+    print('depth_feet ', depth_feet)
+    if depth_feet >= 30:
+        return 3
+    elif depth_feet <= 0:
         return 400
     else:
         # print('psv_data ', psv_data)
         # change these voltages for the pool voltages 0(0.5V) - 1023(4.5V)
-        depth_indicator = interp(psv_data,[0,1023],[400,100])
-        return int(depth_indicator)
+        depth_indicator = interp(depth_feet,[0,30],[400,3])
+    return int(depth_indicator)
 
 
 # calculate depth based on pressure 
 def calculate_depth(psv_data):
-    # where to get the formula - https://www.youtube.com/watch?v=AB7zgnfkEi4
-    gravity = 9.8 #m/s
-    density = 997.453 #kg/m^3
-    voltage= 0.5 + 4.5 * ((psv_data-0)/(1023-0)) #convert bytes to voltage
-    #print("Pressure Sensor Voltage = ", voltage)
-    pressure_kpascal = (3.0*(voltage-0.47))*1000.0
-    #print("Pressure (kPA)= ", pressure_kpascal)   
-    depth_meters = round(pressure_kpascal/( gravity * density), 2)
-    #print("Depth Value (m) = ", depth_meters)
-    return depth_meters
+    depth_feet = round(psv_data/12)
+    print("Depth Value (m) = ", depth_feet)
+    return depth_feet
 
 
 
@@ -199,23 +201,27 @@ def gyro_dashboard():
 
 
 def rpm_dashboard():
+    rpm_graphic_coord = convert_rpms_to_coord(rpm_value)
     RPM_canvas.coords(RPM_bar, rpm_graphic_coord, 3, 3, 100)
-    RPM_value = ttk.Label(root, text=rpm_value, style='.TLabel').place(x=20, y=410, anchor='w')
+    print('rpm_value = ', rpm_value)
+    RPM_value_label.config(text=str(rpm_value))
+    
 
 
 def depth_dashboard():
     depth = calculate_depth(ps_value)
+    depth_graphic_coord = convert_volts_to_coord(ps_value)
     depth_canvas.coords(depth_bar, 3, 400, 100, depth_graphic_coord)
-    depth_value = ttk.Label(root, text=str(depth), style='.TLabel').place(x=730, y=25, anchor='n')
+    depth_value_label.config(text=str(depth))
 
 
 def update_gui():
     while True:
+        print('new update ---------------------------------------------------')
         gyro_dashboard()
         rpm_dashboard()
         depth_dashboard()
         time.sleep(0.1)
-
 
 
 def close_win():
@@ -225,10 +231,12 @@ def close_win():
 # FOR TESTING
 def get_random_xy_coord():
     global gyro_coord
-    global rpmA
+    global rpm_value
     global decode_rpms
     global depth_indicator
     global decode_ps_voltage
+    global ps_value
+    global rpm_graphic_coord
 
     # CREATE A FILE FOR OUTPUTING SERIAL DATA FOR DATALOGGING
     with open(file_path, 'w') as output_file:
@@ -239,13 +247,16 @@ def get_random_xy_coord():
             x = interp(int(data[1]/10),[-9,9],[50,150])
             gyro_coord = [int(x), int(y)]
 
-            decode_rpms = random.randrange(0, 250)
-            rpmA = interp(decode_rpms,[0,250],[3,550])
+            rpm_value = random.randrange(0, 250)
+            #rpm_value = 100
+            print('rpm_value = ', rpm_value)
+            
 
-            decode_ps_voltage = random.randrange(0,1023)
-            depth_indicator = convert_volts_to_coord(decode_ps_voltage) 
-            serial_list = [depth_indicator, rpmA, int(x), int(y)]
+            ps_value = random.randrange(12, 360)
+            depth_indicator = convert_volts_to_coord(ps_value)
+            serial_list = [depth_indicator, rpm_value, int(x), int(y)]
             print('SERIAL LIST ', str(serial_list))
+            
             # OUTPUT SERIAL DATA FOR DL
             output_file.write(str(serial_list) + "\n")
             output_file.flush()    
@@ -275,15 +286,15 @@ def read_sensor_data():
                 serial_string = '' 
             #serial_string = serial_string.replace('\r', '')
             serial_string = serial_string.strip()
-            print('serial string strip: ', serial_string)
+            print('serial string strip!!')
+            print(serial_string)
             #serial_string = re.sub('[^\d,.-]|[.-](?=[^.]*[.])', '', serial_string) 
             serial_string_split = serial_string.split(",")
-            print('serial string split: ', serial_string_split)
+            print('serial string split = ', serial_string_split)
 
-            if (data == b'') or (re.match( r'^\.' or r'^\>' or '^\!', serial_string)) or len(serial_string_split) != 6:
-                print('data w/o backup: ', data)
+            if (data == b'') or (re.match( r'^\.' or r'^\>' or '^\!', serial_string)) :
+                print('data2 ', data)
                 serial_list = serial_list_backup.copy()
-                print('data w/ backup: ', serial_list)
             else:    
                 if "!" not in serial_string.split(","):
                     for x in serial_string.split(","):
@@ -337,8 +348,8 @@ if '__main__' == __name__:
 
     th = threading.Thread(target=read_sensor_data, args=(),  daemon=True)
     th.start()
-
+    
     update_gui()
 
     root.mainloop()  # run hud
-#    test.mainloop()
+    #test.mainloop()
