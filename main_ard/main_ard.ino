@@ -111,9 +111,7 @@ unsigned long refresh; // To store time for refresh of reading
 int rpmA; // RPM from sensor A value
 int rpmB; // RPM from sensor 2 value
 int avg_rpm; // average rpm reading
-int pressure_voltage; // pressure sensor voltage
 int time;
-int voltage;
 bool doLoop = false;
 
 bool state = false;
@@ -131,15 +129,21 @@ void timeSinceStart() {
 }
 
 
-void pressure() {
-  int sensorVal = analogRead(dataINB_PS);
-  int sensorVal2 = analogRead(dataIND_PS);
+/********** PRESSURE SENSORS ******************************************************/
+void insideSensorValue() {
+  // These values give us depth in inches (thats what the PS are calibrated to)
+  int insideSensorVal = analogRead(dataINB_PS); // shorter PS, corresponds to depth
+  Serial.print(insideSensorVal);
+}
 
-  pressure_voltage = (sensorVal + sensorVal2) / 2;
-  Serial.print(pressure_voltage);
+void outsideSensorValue(){
+  // These values give us depth in inches (thats what the PS are calibrated to)
+  int outsideSensorVal = analogRead(dataIND_PS); // Longer PS, used for calculating velocity
+  Serial.print(outsideSensorVal);
 }
 
 
+/********** RPM/HALL EFFECT SENSORS ***********************************************/
 void rpm_value()
 {
   // RPMA Measurement
@@ -183,6 +187,7 @@ void rpm_value()
 }
 
 
+/********** GYRO SENSOR ***********************************************/
 void gyro() {
   // if programming failed, don't try to do anything
   if (!dmpReady) {
@@ -198,9 +203,9 @@ void gyro() {
     mpu.dmpGetGravity(&gravity, &q);
     mpu.dmpGetYawPitchRoll(ypr, &q, &gravity);
     //Serial.print("pry\t");
-    Serial.print(ypr[2] * 180 / M_PI); //pitch
+    //Serial.print(ypr[2] * 180 / M_PI); //pitch
     //Serial.print(",");
-    //Serial.print(ypr[1] * 180/M_PI); //roll
+    Serial.print(ypr[1] * 180/M_PI); //roll
     Serial.print(",");
     Serial.print(ypr[0] * 180 / M_PI); //yaw
 
@@ -216,6 +221,8 @@ void gyro() {
 }
 
 
+
+/********** MOTORS***********************************************/
 // Read the state of the buttons and update motor state accordingly
 void updateMotorState() {
   bool buttonLeftPushed = digitalRead(yawLeft) == HIGH;
@@ -302,7 +309,7 @@ void printDirectionDegrees() {
   Serial.println(yawDegree);
 }
 
-
+/**************** LIGHTS ***********************************************/
 void runLights() {
   // Lights off for 750000 ms or .75 secs
   if ((currMicros - prevLightMicros) >= lightOffTime && !lightOn) {
@@ -353,14 +360,14 @@ void setup() {
 
   // STUFF FROM THE MPU6050 Lib for calculating the pitch/roll/yaw
   // join I2C bus (I2Cdev library doesn't do this automatically)
-#if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
-  Wire.begin();
-  Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
-#elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
-  Fastwire::setup(400, true);
-#endif
+  #if I2CDEV_IMPLEMENTATION == I2CDEV_ARDUINO_WIRE
+    Wire.begin();
+    Wire.setClock(400000); // 400kHz I2C clock. Comment this line if having compilation difficulties
+  #elif I2CDEV_IMPLEMENTATION == I2CDEV_BUILTIN_FASTWIRE
+    Fastwire::setup(400, true);
+  #endif
 
-  while (!Serial); // wait for Leonardo enumeration, others continue immediately
+  while (!Serial); 
 
   mpu.initialize();
   pinMode(INTERRUPT_PIN, INPUT);
@@ -402,7 +409,9 @@ void loop() {
   runLights();
 
   // Sensor Code
-  pressure();
+  insideSensorValue();
+  Serial.print(",");
+  outsideSensorValue();
   Serial.print(",");
   rpm_value();
   Serial.print(",");
