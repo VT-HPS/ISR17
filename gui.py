@@ -12,8 +12,8 @@ import threading
 import random
 from collections import deque
 
-#USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
-USB = '/dev/cu.usbmodem11201' #testing computer - check which usb port the arduino is hooked to
+USB = '/dev/ttyACM0'        #raspberry pi - check which usb port the arduino is hooked to
+#USB = '/dev/cu.usbmodem11201' #testing computer - check which usb port the arduino is hooked to
 print("hit initial")
 gyro_list = [0,0]
 depth = 0
