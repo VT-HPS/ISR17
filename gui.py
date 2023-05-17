@@ -6,7 +6,7 @@ import serial
 from tkinter import *
 from tkinter import ttk
 import tkinter as tk
-from math import sqrt, pow
+from math import sqrt, pow, pi
 from numpy import interp
 import threading
 import random
@@ -149,20 +149,15 @@ def calculate_depth(depth_value):
 
 
 # get speed value    
-def display_speed(insideSensorValue, outsideSensorValue):  
-    fluidDensity = 1000
-    sub_radius = 0.6604 # meters diameter of nautilis
-    flowArea = 3.14 * pow(sub_radius,2)
+def display_speed(rpm_value):  
+    diameter = 0.0254  # Radius of the rotating object in meters
 
-    # Apply offset and scale to sensor readings
-    insidePressure = fluidDensity * 9.81 * insideSensorValue
-    outsidePressure = fluidDensity * 9.81 * outsideSensorValue
+    rps = rpm_value / 60.0  # Convert RPM to RPS
 
-    # Calculate the pressure difference
-    pressureDifference = abs(outsidePressure - insidePressure)
+    circumference = pi * diameter  # Calculate the circumference
 
-    # Calculate the velocity
-    speed = round(sqrt((2 * pressureDifference) / (fluidDensity * flowArea)),1)
+    speed = round(circumference * rps, 2)  # Calculate the speed in m/s
+
     label_result.config(text="{} m/s".format(speed))
     return speed
 
@@ -220,13 +215,13 @@ def gyro_dashboard():
     
 
 def depth_dashboard():
-    depth = calculate_depth(depth_value)
-    depth_graphic_coord = convert_depth_to_coord(depth_value)
+    depth = calculate_depth(insideSensorValue)
+    depth_graphic_coord = convert_depth_to_coord(insideSensorValue)
     depth_canvas.coords(depth_bar, 3, 400, 100, depth_graphic_coord)
     depth_value_label.config(text=str(depth), font=("Times", 25, "bold"))
 
 def speed_dashboard():
-    display_speed(insideSensorValue, outsideSensorValue)
+    display_speed(rpm_value)
 
 
 def update_gui():
@@ -344,11 +339,11 @@ def read_sensor_data():
             else:
                 print('--------------------------------------------')
                 print('SERIAL LIST = ', serial_list) 
-                print('depth : ', serial_list[1], ' in') 
-                print('outsideSensorValue: ', outsideSensorValue, ' m/s')      
-                print('rpm: ', rpm_value)                 
-                print('Yaw value: ', pitch_value)
-                print('Pitch value: ', yaw_value)
+                print('depth : ', serial_list[0], ' in') 
+                print('outsideSensorValue: ', serial_list[1], ' m/s')      
+                print('rpm: ', serial_list[2])                 
+                print('Yaw value: ', serial_list[3])
+                print('Pitch value: ', serial_list[4])
 
 
             # OUTPUT SERIAL DATA FOR DL
